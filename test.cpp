@@ -40,6 +40,18 @@ BOOST_AUTO_TEST_CASE(check_db_handling)
     mr.shuffle();
     mr.prepareRStreams();
     mr.runReducing();
+
+    std::string filename("reduce_");
+    for(size_t i = 0; i < R; i++)
+    {
+        filename += std::to_string(i);
+        filename += ".txt";
+        std::fstream file;
+        file.open(filename.c_str());
+        BOOST_CHECK_MESSAGE(file.is_open(), "file doesn't exists");
+        file.close();
+        filename.erase(std::next(filename.begin(), static_cast<long>(filename.find(std::to_string(i)))), filename.end());
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

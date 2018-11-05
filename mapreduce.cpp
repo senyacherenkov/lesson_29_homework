@@ -39,9 +39,11 @@ MapReduce::MapReduce(const char* filename, size_t M, size_t R):
     m_preparedData.resize(m_M);
     FILE *f;
     f = fopen(filename , "r");
-    fseek(f, 0, SEEK_END);
-    m_sectionSize = static_cast<unsigned long>(ftell(f))/m_M;
-    fclose(f);
+    if(f) {
+        fseek(f, 0, SEEK_END);
+        m_sectionSize = static_cast<unsigned long>(ftell(f))/m_M;
+        fclose(f);
+    }
 }
 
 bool MapReduce::readFile()
@@ -93,7 +95,7 @@ void MapReduce::runReducing()
 {
     std::vector<std::thread> workers;
 
-    for(size_t i = 0; i < m_M; i++)
+    for(size_t i = 0; i < m_R; i++)
     {
         std::thread mapWorker(&MapReduce::FunctionalObjectR, this, i);
         workers.push_back(std::move(mapWorker));
@@ -128,13 +130,15 @@ void MapReduce::FunctionalObjectR(size_t number)
     assert(!m_preparedData.empty());
     std::map<std::string, size_t> threadMapResult;
 
+    size_t counter = 1;
     for(auto it = m_preparedData.at(number).begin(); it != m_preparedData.at(number).end(); it++)
-    {
-        size_t counter = 1;
+    {        
         if(*it == *(it + 1))
             ++counter;
-        else
+        else {
             threadMapResult.emplace(*it, counter);
+            counter = 1;
+        }
     }
 
     std::string filename("reduce_");
@@ -144,10 +148,12 @@ void MapReduce::FunctionalObjectR(size_t number)
     std::ofstream myfile;
     myfile.open (filename.c_str());
 
-    for(const auto& pair: threadMapResult)
-        myfile << pair.first << " " << pair.second << "\n";
+    if(myfile.is_open()) {
+        for(const auto& pair: threadMapResult)
+            myfile << pair.first << " " << pair.second << "\n";
 
-    myfile.close();
+        myfile.close();
+    }
 }
 
 size_t MapReduce::calcSummaryMappedDataSize()
@@ -182,27 +188,32 @@ void MapReduce::prepareRStreams()
     long globalCurrentPosition = 0;
     for(size_t i = 0; i < m_R; i++)
     {
-        long remainCounter = 0;
-        long currentPosition = 0;
-        do{
-            if((m_shuffledData.size() - static_cast<unsigned long>(currentPosition)) < static_cast<unsigned long>(chunkSizeForRStream))
-            {
-                m_preparedData.at(i).insert(
-                            std::next(m_preparedData.at(i).begin(), currentPosition),                   //place for insertion
-                            std::next(m_shuffledData.begin(), globalCurrentPosition),                         //from where
-                            m_shuffledData.end());                                                      //untill
-            }
-
+        if((m_shuffledData.size() - static_cast<unsigned long>(globalCurrentPosition)) < static_cast<unsigned long>(chunkSizeForRStream))
+        {
             m_preparedData.at(i).insert(
-                        std::next(m_preparedData.at(i).begin(), currentPosition),                       //place for insertion
-                        std::next(m_shuffledData.begin(), globalCurrentPosition),                             //from where
-                        std::next(m_shuffledData.begin(), globalCurrentPosition + chunkSizeForRStream + remainCounter));        //untill
+                        std::next(m_preparedData.at(i).begin(), 0),
+                        std::next(m_shuffledData.begin(), globalCurrentPosition),
+                        m_shuffledData.end());
+            break;
+        }
+
+        m_preparedData.at(i).insert(
+                    std::next(m_preparedData.at(i).begin(), 0),
+                    std::next(m_shuffledData.begin(), globalCurrentPosition),
+                    std::next(m_shuffledData.begin(), globalCurrentPosition + chunkSizeForRStream));
+
+        globalCurrentPosition += chunkSizeForRStream;
+
+        long remainCounter = 0;
+        while(m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter)]
+              == m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter - 1)])
+        {
+            m_preparedData.at(i).push_back(m_shuffledData[static_cast<size_t>(chunkSizeForRStream + remainCounter)]);
 
             ++remainCounter;
-            currentPosition += chunkSizeForRStream + remainCounter;
-            globalCurrentPosition += chunkSizeForRStream + remainCounter;
+            ++globalCurrentPosition;
         }
-        while(m_shuffledData[static_cast<size_t>(chunkSizeForRStream)] == m_shuffledData[static_cast<size_t>(chunkSizeForRStream + remainCounter)]);
+
     }
 }
 

@@ -13,8 +13,11 @@ public:
     void shuffle();
 
     void prepareRStreams();
+
 #ifdef TEST_MODE
     std::vector<std::vector<std::string>>& getChunks() { return m_chunks; }
+    std::vector<std::vector<std::string>>& getPreparedData() { return m_preparedData; }
+    std::vector<std::string>& getShuffledData() { return m_shuffledData; }
 #endif
 
 private:
