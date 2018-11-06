@@ -29,8 +29,6 @@ namespace {
     }
 }
 
-namespace fs = std::experimental::filesystem;
-
 MapReduce::MapReduce(const char* filename, size_t M, size_t R):
     m_filename(filename),
     m_M(M),
