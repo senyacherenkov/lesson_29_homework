@@ -33,4 +33,5 @@ private:
     std::vector<std::string>                    m_shuffledData;
     size_t                                      m_M;
     size_t                                      m_R;
+    size_t                                      m_minWordLength;
 };

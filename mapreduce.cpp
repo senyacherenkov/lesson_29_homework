@@ -8,6 +8,7 @@
 #include <cassert>
 #include <map>
 #include <list>
+#include <numeric>
 #include "mapreduce.h"
 
 namespace {
@@ -114,7 +115,8 @@ void MapReduce::FunctionalObjectM(size_t number)
                                                                                         }
     );
 
-    for(size_t i = 0; i < (*it).size(); i++)
+    m_minWordLength = (*it).size();
+    for(size_t i = 0; i < m_minWordLength; i++)
     {
         for(const auto& str: m_chunks.at(number))
         {
@@ -141,6 +143,20 @@ void MapReduce::FunctionalObjectR(size_t number)
         }
     }
 
+    size_t i = 1;
+    for(; i <= m_minWordLength; i++)
+    {
+        std::vector<size_t> data;
+        for(const auto& pair: threadMapResult)
+        {
+            if(pair.first.size() == i)
+                data.emplace_back(pair.second);
+        }
+
+        if(data.size() == static_cast<size_t>(std::accumulate(data.begin(), data.end(), 0)))
+            break;
+    }
+
     std::string filename("reduce_");
     filename += std::to_string(number);
     filename += ".txt";
@@ -148,12 +164,9 @@ void MapReduce::FunctionalObjectR(size_t number)
     std::ofstream myfile;
     myfile.open (filename.c_str());
 
-    if(myfile.is_open()) {
-        for(const auto& pair: threadMapResult)
-            myfile << pair.first << " " << pair.second << "\n";
+    myfile << i;
 
-        myfile.close();
-    }
+    myfile.close();
 }
 
 size_t MapReduce::calcSummaryMappedDataSize()
@@ -176,7 +189,7 @@ void MapReduce::shuffle()
         for(const auto& str: chunk)
             m_shuffledData.push_back(str);
 
-    std::sort(m_shuffledData.begin(), m_shuffledData.end());
+    std::sort(m_shuffledData.begin(), m_shuffledData.end());    
 }
 
 void MapReduce::prepareRStreams()
