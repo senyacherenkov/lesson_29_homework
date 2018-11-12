@@ -13,6 +13,11 @@ int main(int argc, char *argv[])
       }
 
       MapReduce mr(argv[1], static_cast<size_t>(std::stoi(argv[2])), static_cast<size_t>(std::stoi(argv[3])));
+      mr.readFile();
+      mr.runMapping();
+      mr.shuffle();
+      mr.prepareRStreams();
+      mr.runReducing();
 
     }
     catch (std::exception& e)
