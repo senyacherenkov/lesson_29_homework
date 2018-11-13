@@ -62,7 +62,8 @@ bool MapReduce::readFile()
 
         if(numberChars == static_cast<long>(m_sectionSize)) {
             std::getline(file, remain);
-            data += remain + '\n';
+            if(!remain.empty())
+                data += remain + '\n';
         }
 
         m_chunks.push_back(parseData(data));
@@ -104,8 +105,7 @@ void MapReduce::runReducing()
 }
 
 void MapReduce::FunctionalObjectM(size_t number)
-{
-    std::vector<std::string> temp;
+{    
     auto it = std::min_element(m_chunks.at(number).begin(), m_chunks.at(number).end(), [](const std::string& lhs, const std::string& rhs)
                                                                                         {
                                                                                             return lhs.size() < rhs.size();
