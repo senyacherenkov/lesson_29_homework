@@ -105,23 +105,24 @@ void MapReduce::runReducing()
 }
 
 void MapReduce::FunctionalObjectM(size_t number)
-{    
-    auto it = std::min_element(m_chunks.at(number).begin(), m_chunks.at(number).end(), [](const std::string& lhs, const std::string& rhs)
-                                                                                        {
-                                                                                            return lhs.size() < rhs.size();
-                                                                                        }
-    );
+{
+    std::vector<std::string>& threadData = m_chunks.at(number);
+    auto it = std::max_element(threadData.begin(), threadData.end(), [](const std::string& lhs, const std::string& rhs)
+                                                                    {
+                                                                        return lhs.size() < rhs.size();
+                                                                    });
 
-    m_minWordLength = (*it).size();
-    for(size_t i = 0; i < m_minWordLength; i++)
+    std::vector<std::string>& threadResult = m_preparedData.at(number);
+    m_maxWordLength = (*it).size();
+    for(size_t i = 0; i < m_maxWordLength; i++)
     {
         for(const auto& str: m_chunks.at(number))
         {
-            m_preparedData.at(number).push_back(str.substr(0, i + 1));
+            threadResult.push_back(str.substr(0, i + 1));
         }
     }
 
-    std::sort(m_preparedData.at(number).begin(), m_preparedData.at(number).end());
+    std::sort(threadResult.begin(), threadResult.end());
 }
 
 void MapReduce::FunctionalObjectR(size_t number)
@@ -141,7 +142,7 @@ void MapReduce::FunctionalObjectR(size_t number)
     }
 
     size_t i = 1;
-    for(; i <= m_minWordLength; i++)
+    for(; i <= m_maxWordLength; i++)
     {
         std::vector<size_t> data;
         for(const auto& pair: threadMapResult)
@@ -214,17 +215,20 @@ void MapReduce::prepareRStreams()
 
         globalCurrentPosition += chunkSizeForRStream;
 
-        long remainCounter = 0;
-        while(m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter)]
-              == m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter - 1)])
-        {
-            m_preparedData.at(i).push_back(m_shuffledData[static_cast<size_t>(chunkSizeForRStream + remainCounter)]);
+        if(m_shuffledData.size() > 1) {
+            long remainCounter = 0;
+            while(m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter)]
+                  == m_shuffledData[static_cast<size_t>(globalCurrentPosition + remainCounter - 1)])
+            {
+                m_preparedData.at(i).push_back(m_shuffledData[static_cast<size_t>(chunkSizeForRStream + remainCounter)]);
 
-            ++remainCounter;
-            ++globalCurrentPosition;
+                ++remainCounter;
+                ++globalCurrentPosition;
+            }
         }
 
     }
+    return;
 }
 
 
