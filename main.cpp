@@ -8,12 +8,18 @@ int main(int argc, char *argv[])
     {
       if (argc != 4)
       {
-        std::cerr << "Usage: yarn <src> <mnum> <rnum>\n";
-        return 1;
+          std::cerr << "Usage: yarn <src> <mnum> <rnum>\n";
+          return 1;
       }
 
       MapReduce mr(argv[1], static_cast<size_t>(std::stoi(argv[2])), static_cast<size_t>(std::stoi(argv[3])));
-      mr.readFile();
+
+      if(!mr.readFile())
+      {
+          std::cerr << "cannot open file " << argv[1] << std::endl;
+          return 1;
+      }
+
       mr.runMapping();
       mr.shuffle();
       mr.prepareRStreams();
